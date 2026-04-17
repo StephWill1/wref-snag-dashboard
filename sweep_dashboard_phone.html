@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WREF Snag Detection · Sweep Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #07090f;
+    --surface:   #0d1117;
+    --surface2:  #111827;
+    --border:    #1c2535;
+    --chm:       #2dd4bf;
+    --int:       #fb923c;
+    --base:      #64748b;
+    --win:       #86efac;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --dim:       #1e2d40;
+    --c4chm:     #38bdf8;
+    --c4int:     #f59e0b;
+    --c3rgb:     #a78bfa;
+    --c3cir:     #f87171;
+    --ccirchm:   #f472b6;
+    --ccircint:  #34d399;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    padding: 36px 28px;
+  }
+  .wrap { max-width: 1140px; margin: 0 auto; position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+  .header-left .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: .14em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .header-left h1 { font-size: 30px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+  .header-left .sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  .winner-card {
+    background: linear-gradient(135deg, #0d1f14 0%, #0a1a1a 100%);
+    border: 1px solid #1e3a2a;
+    border-radius: 12px;
+    padding: 18px 22px;
+    min-width: 260px;
+    flex-shrink: 0;
+  }
+  .winner-card .wc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #3d6b50;
+    letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .winner-card .wc-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; font-weight: 500; color: var(--c4chm); margin-bottom: 12px;
+  }
+  .winner-card .wc-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+  .wc-stat .wcs-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: #3d6b50;
+    text-transform: uppercase; letter-spacing: .1em; margin-bottom: 3px;
+  }
+  .wc-stat .wcs-val { font-size: 22px; font-weight: 700; }
+
+  /* ── STAT PILLS ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+  }
+  .stat-pill .sp-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px;
+  }
+  .stat-pill .sp-val { font-size: 22px; font-weight: 600; }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ── TABLE PANEL ── */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fpill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .05em;
+    padding: 6px 12px; border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    cursor: pointer; transition: all .15s;
+    min-height: 34px; touch-action: manipulation;
+  }
+  .fpill:hover { color: var(--text); }
+  .fpill.active-ALL  { background: #334155; color: var(--text); border-color: transparent; }
+  .fpill.active-4CH_CHM { background: var(--c4chm); color: #07090f; border-color: transparent; }
+  .fpill.active-4CH_INT { background: var(--c4int); color: #07090f; border-color: transparent; }
+  .fpill.active-3CH_RGB { background: var(--c3rgb); color: #07090f; border-color: transparent; }
+  .fpill.active-3CH_CIR { background: var(--c3cir); color: #07090f; border-color: transparent; }
+  .fpill.active-4CH_CIR_CHM { background: var(--ccirchm); color: #07090f; border-color: transparent; }
+  .fpill.active-4CH_CIR_INT { background: var(--ccircint); color: #07090f; border-color: transparent; }
+  .fpill.active-BASE { background: var(--base); color: #fff; border-color: transparent; }
+
+  .sort-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .sort-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--dim);
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  .sbtn {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    padding: 5px 10px; border-radius: 3px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+    min-height: 30px; touch-action: manipulation;
+  }
+  .sbtn:hover { color: var(--text); border-color: var(--border); }
+  .sbtn.active { color: var(--text); background: var(--surface2); border-color: #2d3f55; }
+
+  /* ── TABLE ── */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th {
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: #2d3f55;
+    letter-spacing: .1em; text-transform: uppercase; font-weight: 500;
+    white-space: nowrap;
+  }
+  th:first-child { text-align: left; }
+  th:not(:first-child) { text-align: right; }
+  tbody tr { border-bottom: 1px solid #0d1520; transition: background .1s; cursor: default; }
+  tbody tr:hover { background: #0f1a2a; }
+  tbody tr.winner-row { background: #0a1a0f; }
+  td {
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: #94a3b8;
+    white-space: nowrap;
+  }
+  td:first-child { text-align: left; color: #cbd5e1; position: sticky; left: 0; background: var(--surface); z-index: 1; }
+  tbody tr.winner-row td:first-child { background: #0a1a0f; }
+  tbody tr:hover td:first-child { background: #0f1a2a; }
+  td:not(:first-child) { text-align: right; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
+  .star { font-size: 9px; color: var(--win); margin-left: 5px; }
+  .dim-row td { color: #475569; }
+
+  /* ── RIGHT COLUMN ── */
+  .right-col { display: flex; flex-direction: column; gap: 16px; }
+  .chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 16px; }
+  .chart-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: .09em; text-transform: uppercase; margin-bottom: 12px;
+  }
+
+  .bar-chart-wrap { position: relative; margin-bottom: 24px; }
+  .bar-chart {
+    display: flex; align-items: flex-end; gap: 3px;
+    height: 120px; border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+  .bar {
+    width: 100%; border-radius: 2px 2px 0 0;
+    transition: opacity .2s; cursor: default; position: relative;
+  }
+  .bar:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #0d1117; border: 1px solid var(--border);
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; padding: 5px 9px; border-radius: 5px;
+    white-space: pre; z-index: 10; pointer-events: none;
+  }
+  .bar-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; color: #334155; margin-top: 4px;
+    transform: rotate(-45deg); transform-origin: center; white-space: nowrap;
+  }
+  .baseline-line {
+    position: absolute; left: 0; right: 0;
+    border-top: 1px dashed #2d3f55; pointer-events: none; z-index: 2;
+  }
+  .baseline-tag {
+    position: absolute; right: 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #2d3f55;
+    transform: translateY(-100%); padding-right: 2px;
+  }
+
+  /* ── SUMMARY CARD ── */
+  .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .summary-card .sc-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #2d3f55;
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .sc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 12px; }
+  .sc-row .sc-key { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .sc-row .sc-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; text-align: right; }
+  .sc-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .improve-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .improve-row .ir-label { font-size: 12px; color: #2d3f55; }
+  .improve-row .ir-val { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--win); }
+
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .leg-dash { width: 14px; border-top: 1px dashed #2d3f55; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+  .panel, .winner-card, .stat-pill, .summary-card { animation: fadeUp .4s ease both; }
+  .stat-pill:nth-child(2) { animation-delay: .05s; }
+  .stat-pill:nth-child(3) { animation-delay: .10s; }
+  .stat-pill:nth-child(4) { animation-delay: .15s; }
+
+  /* ══════════════════════════════════════
+     MOBILE BREAKPOINTS
+  ══════════════════════════════════════ */
+
+  /* Tablet */
+  @media (max-width: 860px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .right-col { order: -1; } /* charts above table on tablet */
+  }
+
+  /* Phone */
+  @media (max-width: 600px) {
+    body { padding: 20px 16px; }
+
+    /* Header stacks cleanly */
+    .header { flex-direction: column; gap: 16px; margin-bottom: 24px; }
+    .header-left h1 { font-size: 22px; }
+    .header-left .sub { font-size: 12px; }
+    .winner-card { min-width: unset; width: 100%; }
+    .winner-card .wc-name { font-size: 15px; }
+    .wc-stat .wcs-val { font-size: 18px; }
+
+    /* Stat pills: 2 per row */
+    .stat-row { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .stat-pill { padding: 10px 14px; }
+    .stat-pill .sp-val { font-size: 18px; }
+
+    /* Panel header: filters and sort stack vertically */
+    .panel-header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 14px; }
+    .filter-pills { gap: 6px; }
+    .fpill { font-size: 10px; padding: 7px 11px; }
+    .sort-row { gap: 5px; }
+
+    /* Table: sticky first col, smooth horizontal scroll */
+    .table-scroll { border-radius: 0; }
+    td, th { padding: 10px 12px; }
+    td { font-size: 11px; }
+    td:first-child {
+      min-width: 160px;
+      /* subtle right shadow to hint scrollability */
+      box-shadow: 2px 0 8px rgba(0,0,0,0.4);
+    }
+
+    /* Charts */
+    .chart-panel { padding: 14px 12px; }
+    .bar-chart { height: 100px; }
+
+    /* Summary card: allow val to wrap */
+    .sc-row { flex-wrap: wrap; }
+    .sc-row .sc-val { font-size: 11px; }
+    .summary-card { padding: 14px 14px; }
+    .improve-row .ir-val { font-size: 14px; }
+  }
+
+  /* Very small phones */
+  @media (max-width: 380px) {
+    .stat-row { grid-template-columns: 1fr; }
+    .winner-card .wc-stats { flex-direction: column; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">WREF Snag Detection · UNet Threshold Sweep</div>
+      <h1>Sweep Results</h1>
+      <div class="sub">123 models · 3ch, 4ch, and 5ch variants · CHM &amp; Intensity thresholds 5–100% · val n=58 chips</div>
+    </div>
+    <div class="winner-card">
+      <div class="wc-label">Overall Winner</div>
+      <div class="wc-name">4ch_rgb_chm_055</div>
+      <div class="wc-stats">
+        <div class="wc-stat"><div class="wcs-label">SnagMAE</div><div class="wcs-val" style="color:#f1f5f9">24.94</div></div>
+        <div class="wc-stat"><div class="wcs-label">vs Baseline</div><div class="wcs-val" style="color:var(--win)">−22.7%</div></div>
+        <div class="wc-stat"><div class="wcs-label">SnagR²</div><div class="wcs-val" style="color:#f1f5f9">0.563</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-pill"><div class="sp-label">Models Evaluated</div><div class="sp-val">123</div></div>
+    <div class="stat-pill"><div class="sp-label">Best R²</div><div class="sp-val" style="color:var(--win)">0.7308</div></div>
+    <div class="stat-pill"><div class="sp-label">Best SnagMAE</div><div class="sp-val" style="color:var(--c4chm)">24.94</div></div>
+    <div class="stat-pill"><div class="sp-label">Baseline SnagMAE</div><div class="sp-val" style="color:var(--base)">32.28</div></div>
+    <div class="stat-pill"><div class="sp-label">Count Error</div><div class="sp-val">1.21%</div></div>
+  </div>
+
+  <div class="main-grid">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="filter-pills">
+          <button class="fpill active-ALL" onclick="filterTable('ALL',this)">ALL</button>
+          <button class="fpill" onclick="filterTable('4CH_CHM',this)">4ch RGB+CHM</button>
+          <button class="fpill" onclick="filterTable('4CH_INT',this)">4ch RGB+INT</button>
+          <button class="fpill" onclick="filterTable('4CH_CIR_CHM',this)">4ch CIR+CHM</button>
+          <button class="fpill" onclick="filterTable('4CH_CIR_INT',this)">4ch CIR+INT</button>
+          <button class="fpill" onclick="filterTable('3CH_RGB',this)">3ch RGB</button>
+          <button class="fpill" onclick="filterTable('3CH_CIR',this)">3ch CIR</button>
+          <button class="fpill" onclick="filterTable('BASE',this)">Base</button>
+        </div>
+        <div class="sort-row">
+          <span class="sort-label">Sort</span>
+          <button class="sbtn active" onclick="sortTable('snag_mae',this)">SnagMAE</button>
+          <button class="sbtn" onclick="sortTable('snag_r2',this)">SnagR²</button>
+          <button class="sbtn" onclick="sortTable('r2',this)">R²</button>
+          <button class="sbtn" onclick="sortTable('slope',this)">Slope Fit</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>R²</th>
+              <th>SnagR²</th>
+              <th>SnagRMSE</th>
+              <th>SnagMAE</th>
+              <th>SnagBias</th>
+              <th>Slope</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="chart-panel">
+        <div class="chart-title">4ch RGB+CHM — SnagMAE by Threshold</div>
+        <div class="bar-chart-wrap">
+          <div class="bar-chart" id="chm-chart"></div>
+          <div style="height:18px;display:flex;gap:3px;margin-top:2px" id="chm-labels"></div>
+        </div>
+        <div class="chart-title" style="margin-top:18px">4ch RGB+INT — SnagMAE by Threshold</div>
+        <div class="bar-chart-wrap">
+          <div class="bar-chart" id="int-chart"></div>
+          <div style="height:18px;display:flex;gap:3px;margin-top:2px" id="int-labels"></div>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--c4chm)"></div>4ch RGB+CHM</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--c4int)"></div>4ch RGB+INT</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#fff"></div>Winner</div>
+          <div class="leg-item"><div class="leg-dash"></div>Baseline 32.28</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="sc-title">Summary</div>
+        <div class="sc-row"><span class="sc-key">Best overall</span><span class="sc-val" style="color:var(--c4chm)">4ch_rgb_chm_055 · 24.94</span></div>
+        <div class="sc-row"><span class="sc-key">Best 4ch RGB+CHM</span><span class="sc-val" style="color:var(--c4chm)">4ch_rgb_chm_055 · 24.94</span></div>
+        <div class="sc-row"><span class="sc-key">Best 4ch RGB+INT</span><span class="sc-val" style="color:var(--c4int)">4ch_rgb_int_085 · 25.92</span></div>
+        <div class="sc-row"><span class="sc-key">Best 5ch CHM</span><span class="sc-val" style="color:var(--chm)">5ch_chm_005 · 26.40</span></div>
+        <div class="sc-row"><span class="sc-key">Best 5ch INT</span><span class="sc-val" style="color:var(--int)">5ch_int_025 · 25.76</span></div>
+        <div class="sc-row"><span class="sc-key">Baseline (3ch RGB)</span><span class="sc-val" style="color:var(--base)">3ch_rgb · 30.57</span></div>
+        <div class="sc-row"><span class="sc-key">Baseline (4ch NIR)</span><span class="sc-val" style="color:var(--base)">4ch_rgb_nir · 32.28</span></div>
+        <div class="sc-row"><span class="sc-key">Worst</span><span class="sc-val" style="color:#f87171">4ch_cir_int_095 · 1160.39</span></div>
+        <hr class="sc-divider"/>
+        <div class="improve-row"><span class="ir-label">Improvement vs 4ch NIR baseline</span><span class="ir-val">−22.7%</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  {model:"5ch_int_025",type:"INT",thr:25,r2:0.6632,snag_r2:0.4534,snag_rmse:37.172,snag_mae:25.760,snag_bias:-1.720,slope:0.628},
+  {model:"5ch_int_075",type:"INT",thr:75,r2:0.6502,snag_r2:0.4322,snag_rmse:37.4,snag_mae:25.835,snag_bias:-1.848,slope:0.610},
+  {model:"5ch_int_030",type:"INT",thr:30,r2:0.6513,snag_r2:0.4340,snag_rmse:37.1,snag_mae:26.297,snag_bias:-0.280,slope:0.641},
+  {model:"5ch_chm_005",type:"CHM",thr:5,r2:0.6654,snag_r2:0.4569,snag_rmse:36.8,snag_mae:26.401,snag_bias:0.296,slope:0.622},
+  {model:"5ch_chm_050",type:"CHM",thr:50,r2:0.6526,snag_r2:0.4362,snag_rmse:37.0,snag_mae:26.599,snag_bias:-0.944,slope:0.592},
+  {model:"5ch_int_065",type:"INT",thr:65,r2:0.6460,snag_r2:0.4253,snag_rmse:37.3,snag_mae:26.668,snag_bias:0.805,slope:0.644},
+  {model:"5ch_int_085",type:"INT",thr:85,r2:0.6205,snag_r2:0.3841,snag_rmse:37.8,snag_mae:26.765,snag_bias:-1.337,slope:0.589},
+  {model:"5ch_int_050",type:"INT",thr:50,r2:0.6230,snag_r2:0.3881,snag_rmse:37.7,snag_mae:26.846,snag_bias:-0.203,slope:0.600},
+  {model:"5ch_chm_070",type:"CHM",thr:70,r2:0.6269,snag_r2:0.3943,snag_rmse:37.6,snag_mae:27.040,snag_bias:0.266,slope:0.614},
+  {model:"5ch_int_055",type:"INT",thr:55,r2:0.6274,snag_r2:0.3952,snag_rmse:37.6,snag_mae:27.063,snag_bias:-0.352,slope:0.604},
+  {model:"5ch_int_035",type:"INT",thr:35,r2:0.6290,snag_r2:0.3978,snag_rmse:37.5,snag_mae:27.106,snag_bias:0.537,slope:0.611},
+  {model:"5ch_int_090",type:"INT",thr:90,r2:0.6265,snag_r2:0.3937,snag_rmse:37.6,snag_mae:27.121,snag_bias:-0.107,slope:0.604},
+  {model:"5ch_chm_010",type:"CHM",thr:10,r2:0.6106,snag_r2:0.3678,snag_rmse:38.0,snag_mae:27.161,snag_bias:-0.649,slope:0.583},
+  {model:"5ch_chm_030",type:"CHM",thr:30,r2:0.5707,snag_r2:0.3031,snag_rmse:39.0,snag_mae:27.268,snag_bias:-0.184,slope:0.581},
+  {model:"5ch_chm_055",type:"CHM",thr:55,r2:0.6352,snag_r2:0.4078,snag_rmse:37.4,snag_mae:27.340,snag_bias:0.312,slope:0.595},
+  {model:"5ch_int_040",type:"INT",thr:40,r2:0.6142,snag_r2:0.3738,snag_rmse:38.0,snag_mae:27.396,snag_bias:-0.693,slope:0.589},
+  {model:"5ch_int_080",type:"INT",thr:80,r2:0.6218,snag_r2:0.3861,snag_rmse:37.7,snag_mae:27.430,snag_bias:0.283,slope:0.608},
+  {model:"5ch_chm_045",type:"CHM",thr:45,r2:0.6408,snag_r2:0.4170,snag_rmse:37.3,snag_mae:27.454,snag_bias:0.041,slope:0.612},
+  {model:"5ch_int_045",type:"INT",thr:45,r2:0.6058,snag_r2:0.3601,snag_rmse:38.2,snag_mae:27.515,snag_bias:0.023,slope:0.597},
+  {model:"5ch_int_070",type:"INT",thr:70,r2:0.6446,snag_r2:0.4231,snag_rmse:37.3,snag_mae:27.536,snag_bias:0.709,slope:0.637},
+  {model:"5ch_chm_060",type:"CHM",thr:60,r2:0.6280,snag_r2:0.3962,snag_rmse:37.6,snag_mae:27.544,snag_bias:-0.441,slope:0.584},
+  {model:"5ch_chm_085",type:"CHM",thr:85,r2:0.6198,snag_r2:0.3828,snag_rmse:37.8,snag_mae:27.593,snag_bias:0.328,slope:0.587},
+  {model:"5ch_chm_020",type:"CHM",thr:20,r2:0.6317,snag_r2:0.4022,snag_rmse:37.5,snag_mae:27.700,snag_bias:0.544,slope:0.615},
+  {model:"5ch_chm_090",type:"CHM",thr:90,r2:0.6185,snag_r2:0.3807,snag_rmse:37.9,snag_mae:27.851,snag_bias:0.163,slope:0.590},
+  {model:"5ch_chm_025",type:"CHM",thr:25,r2:0.5854,snag_r2:0.3270,snag_rmse:38.7,snag_mae:27.859,snag_bias:0.461,slope:0.614},
+  {model:"5ch_chm_080",type:"CHM",thr:80,r2:0.6474,snag_r2:0.4277,snag_rmse:37.0,snag_mae:28.040,snag_bias:-0.203,slope:0.602},
+  {model:"5ch_int_095",type:"INT",thr:95,r2:0.5839,snag_r2:0.3246,snag_rmse:38.8,snag_mae:28.054,snag_bias:-0.154,slope:0.573},
+  {model:"5ch_int_010",type:"INT",thr:10,r2:0.5989,snag_r2:0.3489,snag_rmse:38.3,snag_mae:28.085,snag_bias:-1.712,slope:0.560},
+  {model:"5ch_chm_065",type:"CHM",thr:65,r2:0.6408,snag_r2:0.4169,snag_rmse:37.3,snag_mae:28.112,snag_bias:0.010,slope:0.591},
+  {model:"5ch_chm_015",type:"CHM",thr:15,r2:0.6139,snag_r2:0.3733,snag_rmse:38.0,snag_mae:28.143,snag_bias:-0.334,slope:0.598},
+  {model:"5ch_chm_095",type:"CHM",thr:95,r2:0.6170,snag_r2:0.3783,snag_rmse:37.9,snag_mae:28.265,snag_bias:0.855,slope:0.605},
+  {model:"5ch_int_020",type:"INT",thr:20,r2:0.5943,snag_r2:0.3414,snag_rmse:38.5,snag_mae:28.937,snag_bias:-0.550,slope:0.573},
+  {model:"5ch_int_005",type:"INT",thr:5,r2:0.5599,snag_r2:0.2856,snag_rmse:39.5,snag_mae:29.518,snag_bias:-0.898,slope:0.544},
+  {model:"5ch_chm_040",type:"CHM",thr:40,r2:0.5734,snag_r2:0.3075,snag_rmse:39.0,snag_mae:29.595,snag_bias:0.397,slope:0.618},
+  {model:"5ch_chm_075",type:"CHM",thr:75,r2:0.5949,snag_r2:0.3425,snag_rmse:38.5,snag_mae:30.087,snag_bias:2.829,slope:0.589},
+  {model:"5ch_chm_100",type:"CHM",thr:100,r2:0.5451,snag_r2:0.2617,snag_rmse:40.0,snag_mae:30.351,snag_bias:-0.288,slope:0.539},
+  {model:"5ch_int_060",type:"INT",thr:60,r2:0.5054,snag_r2:0.1972,snag_rmse:40.9,snag_mae:31.889,snag_bias:-0.263,slope:0.512},
+  {model:"4ch_rgb_nir",type:"BASE",thr:null,r2:0.5149,snag_r2:0.2126,snag_rmse:40.5,snag_mae:32.280,snag_bias:0.397,slope:0.526},
+  {model:"5ch_int_015",type:"INT",thr:15,r2:0.4937,snag_r2:0.1781,snag_rmse:41.2,snag_mae:32.608,snag_bias:1.074,slope:0.519},
+  {model:"5ch_int_100",type:"INT",thr:100,r2:0.4839,snag_r2:0.1623,snag_rmse:41.5,snag_mae:32.773,snag_bias:0.773,slope:0.514},
+  {model:"5ch_chm_035",type:"CHM",thr:35,r2:0.2846,snag_r2:-0.1613,snag_rmse:46.8,snag_mae:38.357,snag_bias:-0.514,slope:0.531},
+
+  {model:"4ch_rgb_chm_055",type:"4CH_CHM",thr:55,r2:0.7308,snag_r2:0.5630,snag_rmse:33.2362,snag_mae:24.9441,snag_bias:0.6678,slope:0.7001},
+  {model:"4ch_rgb_chm_060",type:"4CH_CHM",thr:60,r2:0.7022,snag_r2:0.5166,snag_rmse:34.9565,snag_mae:25.1423,snag_bias:-0.4348,slope:0.6521},
+  {model:"4ch_rgb_chm_010",type:"4CH_CHM",thr:10,r2:0.6944,snag_r2:0.5039,snag_rmse:35.4107,snag_mae:25.1692,snag_bias:0.1435,slope:0.6779},
+  {model:"4ch_rgb_chm_080",type:"4CH_CHM",thr:80,r2:0.6828,snag_r2:0.4850,snag_rmse:36.0789,snag_mae:25.4500,snag_bias:-1.0747,slope:0.6163},
+  {model:"4ch_rgb_chm_035",type:"4CH_CHM",thr:35,r2:0.6505,snag_r2:0.4328,snag_rmse:37.8661,snag_mae:25.4954,snag_bias:-3.1515,slope:0.5886},
+  {model:"4ch_rgb_chm_045",type:"4CH_CHM",thr:45,r2:0.6305,snag_r2:0.4001,snag_rmse:38.9398,snag_mae:26.6357,snag_bias:-0.4996,slope:0.6078},
+  {model:"4ch_rgb_chm_095",type:"4CH_CHM",thr:95,r2:0.6577,snag_r2:0.4444,snag_rmse:37.4772,snag_mae:26.7523,snag_bias:0.1496,slope:0.6253},
+  {model:"4ch_rgb_chm_030",type:"4CH_CHM",thr:30,r2:0.6408,snag_r2:0.4170,snag_rmse:38.3901,snag_mae:26.8678,snag_bias:-0.0907,slope:0.6058},
+  {model:"4ch_rgb_chm_065",type:"4CH_CHM",thr:65,r2:0.6628,snag_r2:0.4527,snag_rmse:37.1940,snag_mae:26.8937,snag_bias:0.2182,slope:0.6384},
+  {model:"4ch_rgb_chm_050",type:"4CH_CHM",thr:50,r2:0.6518,snag_r2:0.4348,snag_rmse:37.7968,snag_mae:27.6147,snag_bias:0.9605,slope:0.6137},
+  {model:"4ch_rgb_chm_020",type:"4CH_CHM",thr:20,r2:0.6080,snag_r2:0.3636,snag_rmse:40.1068,snag_mae:27.6282,snag_bias:0.4461,slope:0.6064},
+  {model:"4ch_rgb_chm_015",type:"4CH_CHM",thr:15,r2:0.6119,snag_r2:0.3700,snag_rmse:39.9069,snag_mae:27.6506,snag_bias:1.2385,slope:0.6101},
+  {model:"4ch_rgb_chm_085",type:"4CH_CHM",thr:85,r2:0.6199,snag_r2:0.3831,snag_rmse:39.4902,snag_mae:27.7256,snag_bias:0.7960,slope:0.5961},
+  {model:"4ch_rgb_chm_075",type:"4CH_CHM",thr:75,r2:0.6260,snag_r2:0.3929,snag_rmse:39.1753,snag_mae:27.7417,snag_bias:0.4807,slope:0.6099},
+  {model:"4ch_rgb_chm_005",type:"4CH_CHM",thr:5,r2:0.5956,snag_r2:0.3436,snag_rmse:40.7330,snag_mae:28.2189,snag_bias:-0.6821,slope:0.5646},
+  {model:"4ch_rgb_chm_025",type:"4CH_CHM",thr:25,r2:0.5796,snag_r2:0.3177,snag_rmse:41.5308,snag_mae:28.7983,snag_bias:0.1171,slope:0.6074},
+  {model:"4ch_rgb_chm_070",type:"4CH_CHM",thr:70,r2:0.5618,snag_r2:0.2888,snag_rmse:42.4013,snag_mae:29.2365,snag_bias:0.5661,slope:0.5555},
+  {model:"4ch_rgb_chm_040",type:"4CH_CHM",thr:40,r2:0.4248,snag_r2:0.0664,snag_rmse:48.5792,snag_mae:34.3265,snag_bias:0.4825,slope:0.6320},
+
+  {model:"4ch_rgb_int_085",type:"4CH_INT",thr:85,r2:0.6670,snag_r2:0.4594,snag_rmse:36.9661,snag_mae:25.9166,snag_bias:0.4973,slope:0.6520},
+  {model:"4ch_rgb_int_030",type:"4CH_INT",thr:30,r2:0.6498,snag_r2:0.4316,snag_rmse:37.9047,snag_mae:26.4892,snag_bias:0.2243,slope:0.6593},
+  {model:"4ch_rgb_int_060",type:"4CH_INT",thr:60,r2:0.6504,snag_r2:0.4325,snag_rmse:37.8757,snag_mae:26.5410,snag_bias:0.1718,slope:0.6479},
+  {model:"4ch_rgb_int_050",type:"4CH_INT",thr:50,r2:0.6465,snag_r2:0.4263,snag_rmse:38.0822,snag_mae:26.7360,snag_bias:0.3613,slope:0.6438},
+  {model:"4ch_rgb_int_065",type:"4CH_INT",thr:65,r2:0.6279,snag_r2:0.3959,snag_rmse:39.0766,snag_mae:26.9131,snag_bias:-1.3639,slope:0.6037},
+  {model:"4ch_rgb_int_075",type:"4CH_INT",thr:75,r2:0.6323,snag_r2:0.4031,snag_rmse:38.8436,snag_mae:26.9401,snag_bias:-0.5049,slope:0.6071},
+  {model:"4ch_rgb_int_020",type:"4CH_INT",thr:20,r2:0.6255,snag_r2:0.3921,snag_rmse:39.1992,snag_mae:27.0006,snag_bias:-0.0868,slope:0.6211},
+  {model:"4ch_rgb_int_080",type:"4CH_INT",thr:80,r2:0.6230,snag_r2:0.3880,snag_rmse:39.3329,snag_mae:27.0472,snag_bias:-0.8954,slope:0.5984},
+  {model:"4ch_rgb_int_035",type:"4CH_INT",thr:35,r2:0.6426,snag_r2:0.4199,snag_rmse:38.2932,snag_mae:27.0477,snag_bias:0.1896,slope:0.6278},
+  {model:"4ch_rgb_int_025",type:"4CH_INT",thr:25,r2:0.6021,snag_r2:0.3541,snag_rmse:40.4053,snag_mae:27.1477,snag_bias:0.1838,slope:0.6035},
+  {model:"4ch_rgb_int_070",type:"4CH_INT",thr:70,r2:0.6353,snag_r2:0.4080,snag_rmse:38.6846,snag_mae:27.3256,snag_bias:-0.4242,slope:0.6261},
+  {model:"4ch_rgb_int_005",type:"4CH_INT",thr:5,r2:0.5989,snag_r2:0.3490,snag_rmse:40.5664,snag_mae:28.0362,snag_bias:0.3888,slope:0.5799},
+  {model:"4ch_rgb_int_095",type:"4CH_INT",thr:95,r2:0.5665,snag_r2:0.2963,snag_rmse:42.1759,snag_mae:28.4204,snag_bias:-1.9612,slope:0.5490},
+  {model:"4ch_rgb_int_015",type:"4CH_INT",thr:15,r2:0.5538,snag_r2:0.2757,snag_rmse:42.7898,snag_mae:28.6062,snag_bias:0.0869,slope:0.5620},
+  {model:"4ch_rgb_int_090",type:"4CH_INT",thr:90,r2:0.5663,snag_r2:0.2959,snag_rmse:42.1867,snag_mae:29.2296,snag_bias:0.2499,slope:0.5621},
+  {model:"4ch_rgb_int_010",type:"4CH_INT",thr:10,r2:0.5650,snag_r2:0.2939,snag_rmse:42.2469,snag_mae:29.6257,snag_bias:0.1834,slope:0.5537},
+  {model:"4ch_rgb_int_040",type:"4CH_INT",thr:40,r2:0.5346,snag_r2:0.2445,snag_rmse:43.6996,snag_mae:30.1925,snag_bias:0.0153,slope:0.5345},
+  {model:"4ch_rgb_int_100",type:"4CH_INT",thr:100,r2:0.4918,snag_r2:0.1751,snag_rmse:45.6631,snag_mae:31.6524,snag_bias:-0.1262,slope:0.5080},
+
+  {model:"3ch_rgb",type:"3CH_RGB",thr:null,r2:0.5282,snag_r2:0.2342,snag_rmse:43.9979,snag_mae:30.5736,snag_bias:-1.1987,slope:0.5216},
+  {model:"3ch_cir",type:"3CH_CIR",thr:null,r2:-116.1859,snag_r2:-189.2321,snag_rmse:693.4209,snag_mae:623.0698,snag_bias:623.0698,slope:5.9785},
+
+  {model:"4ch_cir_chm_060",type:"4CH_CIR_CHM",thr:60,r2:0.5562,snag_r2:0.2796,snag_rmse:42.6719,snag_mae:29.9021,snag_bias:-2.2935,slope:0.5215},
+  {model:"4ch_cir_chm_095",type:"4CH_CIR_CHM",thr:95,r2:0.6279,snag_r2:0.3959,snag_rmse:39.0758,snag_mae:31.0201,snag_bias:12.1082,slope:0.7792},
+  {model:"4ch_cir_chm_040",type:"4CH_CIR_CHM",thr:40,r2:0.5252,snag_r2:0.2292,snag_rmse:44.1385,snag_mae:31.4806,snag_bias:1.1124,slope:0.5400},
+  {model:"4ch_cir_chm_030",type:"4CH_CIR_CHM",thr:30,r2:0.5193,snag_r2:0.2197,snag_rmse:44.4103,snag_mae:31.7649,snag_bias:2.4586,slope:0.5549},
+  {model:"4ch_cir_chm_055",type:"4CH_CIR_CHM",thr:55,r2:0.3704,snag_r2:-0.0221,snag_rmse:50.8276,snag_mae:32.2050,snag_bias:-20.1487,slope:0.3168},
+  {model:"4ch_cir_chm_015",type:"4CH_CIR_CHM",thr:15,r2:0.3922,snag_r2:0.0133,snag_rmse:49.9407,snag_mae:32.7425,snag_bias:-14.0321,slope:0.3561},
+  {model:"4ch_cir_chm_050",type:"4CH_CIR_CHM",thr:50,r2:0.5398,snag_r2:0.2529,snag_rmse:43.4542,snag_mae:33.5857,snag_bias:11.6106,slope:0.6957},
+  {model:"4ch_cir_chm_045",type:"4CH_CIR_CHM",thr:45,r2:0.4735,snag_r2:0.1452,snag_rmse:46.4810,snag_mae:34.2664,snag_bias:5.8555,slope:0.5672},
+  {model:"4ch_cir_chm_070",type:"4CH_CIR_CHM",thr:70,r2:0.3355,snag_r2:-0.0787,snag_rmse:52.2170,snag_mae:41.0037,snag_bias:18.3419,slope:0.6816},
+  {model:"4ch_cir_chm_065",type:"4CH_CIR_CHM",thr:65,r2:0.2733,snag_r2:-0.1797,snag_rmse:54.6069,snag_mae:45.0749,snag_bias:29.4659,slope:0.8421},
+  {model:"4ch_cir_chm_020",type:"4CH_CIR_CHM",thr:20,r2:-0.0255,snag_r2:-0.6647,snag_rmse:64.8668,snag_mae:53.4140,snag_bias:37.4778,slope:0.8587},
+  {model:"4ch_cir_chm_100",type:"4CH_CIR_CHM",thr:100,r2:-0.2137,snag_r2:-0.9702,snag_rmse:70.5678,snag_mae:57.9474,snag_bias:44.6679,slope:0.8859},
+  {model:"4ch_cir_chm_075",type:"4CH_CIR_CHM",thr:75,r2:-0.6058,snag_r2:-1.6068,snag_rmse:81.1727,snag_mae:69.2224,snag_bias:60.5059,slope:1.0905},
+  {model:"4ch_cir_chm_025",type:"4CH_CIR_CHM",thr:25,r2:-15.2898,snag_r2:-25.4438,snag_rmse:258.5334,snag_mae:235.0712,snag_bias:-235.0712,slope:-1.4973},
+  {model:"4ch_cir_chm_090",type:"4CH_CIR_CHM",thr:90,r2:-20.0148,snag_r2:-33.1141,snag_rmse:293.6447,snag_mae:262.1778,snag_bias:262.1778,slope:2.9667},
+  {model:"4ch_cir_chm_085",type:"4CH_CIR_CHM",thr:85,r2:-41.2934,snag_r2:-67.6565,snag_rmse:416.5775,snag_mae:369.8343,snag_bias:369.8343,slope:3.8425},
+  {model:"4ch_cir_chm_035",type:"4CH_CIR_CHM",thr:35,r2:-129.8137,snag_r2:-211.3547,snag_rmse:732.6321,snag_mae:659.2696,snag_bias:659.2696,slope:6.3648},
+  {model:"4ch_cir_chm_010",type:"4CH_CIR_CHM",thr:10,r2:-329.5112,snag_r2:-535.5310,snag_rmse:1164.5347,snag_mae:1052.5049,snag_bias:1052.5049,slope:9.9086},
+
+  {model:"4ch_cir_int_010",type:"4CH_CIR_INT",thr:10,r2:0.4591,snag_r2:0.1219,snag_rmse:47.1110,snag_mae:30.7213,snag_bias:-9.5238,slope:0.4144},
+  {model:"4ch_cir_int_060",type:"4CH_CIR_INT",thr:60,r2:0.4298,snag_r2:0.0744,snag_rmse:48.3690,snag_mae:32.5664,snag_bias:-6.2236,slope:0.4287},
+  {model:"4ch_cir_int_070",type:"4CH_CIR_INT",thr:70,r2:0.4367,snag_r2:0.0855,snag_rmse:48.0772,snag_mae:32.7197,snag_bias:-3.1047,slope:0.4656},
+  {model:"4ch_cir_int_005",type:"4CH_CIR_INT",thr:5,r2:0.0688,snag_r2:-0.5117,snag_rmse:61.8144,snag_mae:41.2034,snag_bias:-39.2032,slope:0.1480},
+  {model:"4ch_cir_int_085",type:"4CH_CIR_INT",thr:85,r2:0.3228,snag_r2:-0.0994,snag_rmse:52.7143,snag_mae:44.2705,snag_bias:31.4470,slope:0.9260},
+  {model:"4ch_cir_int_055",type:"4CH_CIR_INT",thr:55,r2:-2.4294,snag_r2:-4.5671,snag_rmse:118.6232,snag_mae:100.5168,snag_bias:93.3769,slope:1.3083},
+  {model:"4ch_cir_int_020",type:"4CH_CIR_INT",thr:20,r2:-2.7197,snag_r2:-5.0383,snag_rmse:123.5409,snag_mae:100.6874,snag_bias:90.4458,slope:1.2281},
+  {model:"4ch_cir_int_100",type:"4CH_CIR_INT",thr:100,r2:-3.6206,snag_r2:-6.5008,snag_rmse:137.6919,snag_mae:117.0380,snag_bias:112.7324,slope:1.4702},
+  {model:"4ch_cir_int_025",type:"4CH_CIR_INT",thr:25,r2:-5.0107,snag_r2:-8.7574,snag_rmse:157.0442,snag_mae:133.3883,snag_bias:131.1814,slope:1.6654},
+  {model:"4ch_cir_int_035",type:"4CH_CIR_INT",thr:35,r2:-5.2964,snag_r2:-9.2212,snag_rmse:160.7334,snag_mae:142.1034,snag_bias:-142.1034,slope:-0.7957},
+  {model:"4ch_cir_int_045",type:"4CH_CIR_INT",thr:45,r2:-8.7727,snag_r2:-14.8643,snag_rmse:200.2469,snag_mae:170.9751,snag_bias:170.5106,slope:1.9790},
+  {model:"4ch_cir_int_080",type:"4CH_CIR_INT",thr:80,r2:-8.6354,snag_r2:-14.6414,snag_rmse:198.8353,snag_mae:179.3686,snag_bias:-179.3686,slope:-1.0444},
+  {model:"4ch_cir_int_015",type:"4CH_CIR_INT",thr:15,r2:-20.0926,snag_r2:-33.2403,snag_rmse:294.1873,snag_mae:259.5129,snag_bias:259.5129,slope:2.7649},
+  {model:"4ch_cir_int_040",type:"4CH_CIR_INT",thr:40,r2:-28.0437,snag_r2:-46.1478,snag_rmse:345.2117,snag_mae:303.9425,snag_bias:303.9425,slope:3.1815},
+  {model:"4ch_cir_int_050",type:"4CH_CIR_INT",thr:50,r2:-50.3200,snag_r2:-82.3097,snag_rmse:458.8838,snag_mae:418.3002,snag_bias:-418.3002,slope:-3.2122},
+  {model:"4ch_cir_int_065",type:"4CH_CIR_INT",thr:65,r2:-64.1110,snag_r2:-104.6971,snag_rmse:516.8762,snag_mae:462.0167,snag_bias:462.0167,slope:4.5554},
+  {model:"4ch_cir_int_090",type:"4CH_CIR_INT",thr:90,r2:-86.5549,snag_r2:-141.1312,snag_rmse:599.3765,snag_mae:535.8491,snag_bias:535.8491,slope:5.2751},
+  {model:"4ch_cir_int_030",type:"4CH_CIR_INT",thr:30,r2:-130.9251,snag_r2:-213.1589,snag_rmse:735.7378,snag_mae:660.3550,snag_bias:660.3550,slope:6.3292},
+  {model:"4ch_cir_int_075",type:"4CH_CIR_INT",thr:75,r2:-179.0248,snag_r2:-291.2410,snag_rmse:859.4598,snag_mae:783.8786,snag_bias:-783.8786,slope:-6.4846},
+  {model:"4ch_cir_int_095",type:"4CH_CIR_INT",thr:95,r2:-398.3871,snag_r2:-647.3398,snag_rmse:1280.1367,snag_mae:1160.3927,snag_bias:-1160.3927,slope:-9.6281},
+];
+
+const WINNER = "4ch_rgb_chm_055";
+const BASELINE_MAE = 32.280;
+
+const TYPE_COLOR = {
+  "CHM":         "#2dd4bf",
+  "INT":         "#fb923c",
+  "BASE":        "#64748b",
+  "4CH_CHM":     "#38bdf8",
+  "4CH_INT":     "#f59e0b",
+  "3CH_RGB":     "#a78bfa",
+  "3CH_CIR":     "#f87171",
+  "4CH_CIR_CHM": "#f472b6",
+  "4CH_CIR_INT": "#34d399",
+};
+
+function typeColor(t) { return TYPE_COLOR[t] || "#64748b"; }
+function fmt(v, k) {
+  if (v==null||isNaN(v)) return "—";
+  if (["snag_mae","snag_rmse"].includes(k)) return v.toFixed(2);
+  if (["snag_r2","r2"].includes(k)) return v.toFixed(4);
+  if (k==="snag_bias") return (v>=0?"+":"")+v.toFixed(3);
+  if (k==="slope") return v.toFixed(3);
+  return v;
+}
+
+let currentFilter = "ALL";
+let currentSort = "snag_mae";
+
+function filterTable(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.fpill').forEach(b => { b.className = 'fpill'; });
+  btn.className = 'fpill active-' + type;
+  renderTable();
+}
+
+function sortTable(key, btn) {
+  currentSort = key;
+  document.querySelectorAll('.sbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  let rows = [...DATA];
+  if (currentFilter !== "ALL") rows = rows.filter(r => r.type === currentFilter);
+  rows.sort((a,b) => {
+    if (currentSort === "snag_mae") return a.snag_mae - b.snag_mae;
+    if (currentSort === "snag_bias") return Math.abs(a.snag_bias) - Math.abs(b.snag_bias);
+    if (currentSort === "slope") return Math.abs(a.slope - 1) - Math.abs(b.slope - 1);
+    return b[currentSort] - a[currentSort];
+  });
+
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = rows.map(r => {
+    const isWin = r.model === WINNER;
+    const isBase = r.type === "BASE";
+    const c = typeColor(r.type);
+    return `<tr class="${isWin?'winner-row':''} ${isBase?'dim-row':''}">
+      <td>
+        <span class="dot" style="background:${c}"></span>${r.model}${isWin ? '<span class="star">&#9733;</span>' : ''}
+      </td>
+      <td>${fmt(r.r2,'r2')}</td>
+      <td>${fmt(r.snag_r2,'snag_r2')}</td>
+      <td>${fmt(r.snag_rmse,'snag_rmse')}</td>
+      <td>${fmt(r.snag_mae,'snag_mae')}</td>
+      <td>${fmt(r.snag_bias,'snag_bias')}</td>
+      <td>${fmt(r.slope,'slope')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBarChart(containerId, labelId, type, color) {
+  const rows = DATA.filter(r => r.type === type).sort((a,b) => a.thr - b.thr);
+  if (!rows.length) return;
+
+  const allMAE = rows.map(r => r.snag_mae);
+  const minMAE = Math.min(...allMAE);
+  const maxMAE = Math.max(BASELINE_MAE + 4, Math.max(...allMAE.filter(v => v < 50)));
+  const clampedMax = Math.min(maxMAE, 40);
+  const displayMin = Math.min(minMAE - 1, 23);
+  const range = clampedMax - displayMin;
+  const chartH = 120;
+
+  const baselineH = Math.max(0, Math.min(chartH, ((clampedMax - BASELINE_MAE) / range) * chartH));
+  const winnerModel = rows.reduce((b,r) => r.snag_mae < b.snag_mae ? r : b, rows[0]);
+
+  const chart = document.getElementById(containerId);
+  const labels = document.getElementById(labelId);
+  chart.style.position = 'relative';
+
+  const line = document.createElement('div');
+  line.className = 'baseline-line';
+  line.style.bottom = baselineH + 'px';
+  const tag = document.createElement('div');
+  tag.className = 'baseline-tag';
+  tag.style.bottom = baselineH + 'px';
+  tag.textContent = 'baseline';
+  chart.appendChild(line);
+  chart.appendChild(tag);
+
+  rows.forEach(r => {
+    const clampedMAE = Math.min(r.snag_mae, clampedMax);
+    const h = Math.max(2, ((clampedMax - clampedMAE) / range) * chartH);
+    const isWin = r.model === winnerModel.model;
+    const isGlobalWin = r.model === WINNER;
+
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = h + 'px';
+    bar.style.background = isGlobalWin ? '#ffffff' : (isWin ? '#c7f2e8' : color);
+    bar.style.opacity = isWin ? '1' : '0.7';
+    bar.style.width = '100%';
+    bar.setAttribute('data-tip', `${r.model}\nMAE: ${r.snag_mae.toFixed(2)}\nR²: ${r.snag_r2.toFixed(3)}`);
+    col.appendChild(bar);
+    chart.appendChild(col);
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:8px;color:' + (isGlobalWin ? '#fff' : '#2d3f55') + ';';
+    lbl.textContent = r.thr;
+    labels.appendChild(lbl);
+  });
+}
+
+renderTable();
+renderBarChart('chm-chart', 'chm-labels', '4CH_CHM', '#38bdf8');
+renderBarChart('int-chart', 'int-labels', '4CH_INT', '#f59e0b');
+</script>
+</body>
+</html>
