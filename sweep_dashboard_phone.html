@@ -994,13 +994,16 @@ const TYPE_COLOR = {
   "4CH_CIR_INT": "#34d399",
 };
 
-function typeColor(t) { return TYPE_COLOR[t] || "#64748b"; }
+function typeColor(t) {
+  return TYPE_COLOR[t] || "#64748b";
+}
+
 function fmt(v, k) {
-  if (v==null||isNaN(v)) return "—";
-  if (["snag_mae","snag_rmse"].includes(k)) return v.toFixed(2);
-  if (["snag_r2","r2"].includes(k)) return v.toFixed(4);
-  if (k==="snag_bias") return (v>=0?"+":"")+v.toFixed(3);
-  if (k==="slope") return v.toFixed(3);
+  if (v == null || isNaN(v)) return "—";
+  if (["snag_mae", "snag_rmse"].includes(k)) return v.toFixed(2);
+  if (["snag_r2", "r2"].includes(k)) return v.toFixed(4);
+  if (k === "snag_bias") return (v >= 0 ? "+" : "") + v.toFixed(3);
+  if (k === "slope") return v.toFixed(3);
   return v;
 }
 
@@ -1009,7 +1012,9 @@ let currentSort = "snag_mae";
 
 function filterTable(type, btn) {
   currentFilter = type;
-  document.querySelectorAll('.fpill').forEach(b => { b.className = 'fpill'; });
+  document.querySelectorAll('.fpill').forEach(b => {
+    b.className = 'fpill';
+  });
   btn.className = 'fpill active-' + type;
   renderTable();
 }
@@ -1023,8 +1028,12 @@ function sortTable(key, btn) {
 
 function renderTable() {
   let rows = [...DATA];
-  if (currentFilter !== "ALL") rows = rows.filter(r => r.type === currentFilter);
-  rows.sort((a,b) => {
+
+  if (currentFilter !== "ALL") {
+    rows = rows.filter(r => r.type === currentFilter);
+  }
+
+  rows.sort((a, b) => {
     if (currentSort === "snag_mae") return a.snag_mae - b.snag_mae;
     if (currentSort === "snag_bias") return Math.abs(a.snag_bias) - Math.abs(b.snag_bias);
     if (currentSort === "slope") return Math.abs(a.slope - 1) - Math.abs(b.slope - 1);
@@ -1032,11 +1041,13 @@ function renderTable() {
   });
 
   const tbody = document.getElementById('tbl-body');
+
   tbody.innerHTML = rows.map(r => {
     const isWin = r.model === WINNER;
     const isBase = r.type === "BASE";
     const c = typeColor(r.type);
-    return `<tr class="${isWin?'winner-row':''} ${isBase?'dim-row':''}">
+
+    return `<tr class="${isWin ? 'winner-row' : ''} ${isBase ? 'dim-row' : ''}">
       <td>
         <span class="dot" style="background:${c}"></span>${r.model}${isWin ? '<span class="star">&#9733;</span>' : ''}
       </td>
@@ -1051,31 +1062,46 @@ function renderTable() {
 }
 
 function renderBarChart(containerId, labelId, type, color) {
-  const rows = DATA.filter(r => r.type === type).sort((a,b) => a.thr - b.thr);
+  const rows = DATA
+    .filter(r => r.type === type)
+    .sort((a, b) => a.thr - b.thr);
+
   if (!rows.length) return;
-
-  const allMAE = rows.map(r => r.snag_mae);
-  const minMAE = Math.min(...allMAE);
-  const maxMAE = Math.max(BASELINE_MAE + 4, Math.max(...allMAE.filter(v => v < 50)));
-  const clampedMax = Math.min(maxMAE, 40);
-  const displayMin = Math.min(minMAE - 1, 23);
-  const range = clampedMax - displayMin;
-  const chartH = 120;
-
-  const baselineH = Math.max(0, Math.min(chartH, ((clampedMax - BASELINE_MAE) / range) * chartH));
-  const winnerModel = rows.reduce((b,r) => r.snag_mae < b.snag_mae ? r : b, rows[0]);
 
   const chart = document.getElementById(containerId);
   const labels = document.getElementById(labelId);
+
+  chart.innerHTML = '';
+  labels.innerHTML = '';
+
+  const allMAE = rows.map(r => r.snag_mae);
+  const minMAE = Math.min(...allMAE);
+  const usableMax = Math.max(...allMAE.filter(v => v < 50), BASELINE_MAE + 4);
+  const clampedMax = Math.min(usableMax, 40);
+  const displayMin = Math.min(minMAE - 1, 23);
+  const range = Math.max(1, clampedMax - displayMin);
+  const chartH = window.innerWidth <= 600 ? 100 : 120;
+
+  const baselineH = Math.max(
+    0,
+    Math.min(chartH, ((clampedMax - BASELINE_MAE) / range) * chartH)
+  );
+
+  const winnerModel = rows.reduce((best, row) =>
+    row.snag_mae < best.snag_mae ? row : best, rows[0]
+  );
+
   chart.style.position = 'relative';
 
   const line = document.createElement('div');
   line.className = 'baseline-line';
   line.style.bottom = baselineH + 'px';
+
   const tag = document.createElement('div');
   tag.className = 'baseline-tag';
   tag.style.bottom = baselineH + 'px';
   tag.textContent = 'baseline';
+
   chart.appendChild(line);
   chart.appendChild(tag);
 
