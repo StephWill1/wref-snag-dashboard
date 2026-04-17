@@ -353,8 +353,6 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 18px 16px;
-    width: 100%;
-    max-width: 100%;
     min-width: 0;
   }
 
@@ -372,36 +370,44 @@
     margin-bottom: 24px;
     width: 100%;
     min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .bar-chart-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chart-inner {
+    position: relative;
+    min-width: 100%;
   }
 
   .bar-chart {
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
+    position: relative;
+    display: grid;
+    align-items: end;
+    gap: 4px;
     height: 120px;
     border-bottom: 1px solid var(--border);
-    position: relative;
-    width: 100%;
-    min-width: 0;
-    overflow: visible;
   }
 
   .bar-col {
+    position: relative;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1 1 0;
+    align-items: end;
+    justify-content: center;
     min-width: 0;
     height: 100%;
-    justify-content: flex-end;
   }
 
   .bar {
     width: 100%;
     min-height: 2px;
-    border-radius: 2px 2px 0 0;
+    border-radius: 3px 3px 0 0;
     transition: opacity .2s;
-    cursor: default;
     position: relative;
   }
 
@@ -423,13 +429,20 @@
     pointer-events: none;
   }
 
-  .bar-label {
+  .chart-labels {
+    display: grid;
+    gap: 4px;
+    margin-top: 4px;
+    height: 18px;
+  }
+
+  .chart-label-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'JetBrains Mono', monospace;
     font-size: 8px;
     color: #334155;
-    margin-top: 4px;
-    transform: rotate(-45deg);
-    transform-origin: center;
     white-space: nowrap;
   }
 
@@ -454,25 +467,15 @@
     background: var(--surface);
   }
 
-  .chart-labels {
-    height: 18px;
-    display: flex;
-    gap: 3px;
-    margin-top: 2px;
-    width: 100%;
-    min-width: 0;
-  }
+  /* Phone */
+  @media (max-width: 600px) {
+    .chart-panel {
+      padding: 14px 12px;
+    }
 
-  .chart-label-item {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 8px;
-    color: #2d3f55;
-    white-space: nowrap;
+    .bar-chart {
+      height: 100px;
+    }
   }
 
   /* ── SUMMARY CARD ── */
@@ -818,14 +821,18 @@
       <div class="chart-panel">
         <div class="chart-title">4ch RGB+CHM — SnagMAE by Threshold</div>
         <div class="bar-chart-wrap">
-          <div class="bar-chart" id="chm-chart"></div>
-          <div class="chart-labels" id="chm-labels"></div>
+          <div class="chart-inner">
+            <div class="bar-chart" id="chm-chart"></div>
+            <div class="chart-labels" id="chm-labels"></div>
+          </div>
         </div>
 
         <div class="chart-title" style="margin-top:18px">4ch RGB+INT — SnagMAE by Threshold</div>
         <div class="bar-chart-wrap">
-          <div class="bar-chart" id="int-chart"></div>
-          <div class="chart-labels" id="int-labels"></div>
+          <div class="chart-inner">
+            <div class="bar-chart" id="int-chart"></div>
+            <div class="chart-labels" id="int-labels"></div>
+          </div>
         </div>
 
         <div class="legend">
@@ -1076,11 +1083,29 @@ function renderBarChart(containerId, labelId, type, color) {
 
   const allMAE = rows.map(r => r.snag_mae);
   const minMAE = Math.min(...allMAE);
-  const usableMax = Math.max(...allMAE.filter(v => v < 50), BASELINE_MAE + 4);
-  const clampedMax = Math.min(usableMax, 40);
+  const visibleValues = allMAE.filter(v => v < 50);
+  const maxMAE = Math.max(BASELINE_MAE + 4, ...(visibleValues.length ? visibleValues : allMAE));
+  const clampedMax = Math.min(maxMAE, 40);
   const displayMin = Math.min(minMAE - 1, 23);
   const range = Math.max(1, clampedMax - displayMin);
   const chartH = window.innerWidth <= 600 ? 100 : 120;
+
+  const colWidth = window.innerWidth <= 600 ? 22 : 1;
+  const gridCols = window.innerWidth <= 600
+    ? `repeat(${rows.length}, 22px)`
+    : `repeat(${rows.length}, minmax(0, 1fr))`;
+
+  chart.style.gridTemplateColumns = gridCols;
+  labels.style.gridTemplateColumns = gridCols;
+
+  if (window.innerWidth <= 600) {
+    const chartWidth = rows.length * 22 + (rows.length - 1) * 4;
+    chart.style.width = chartWidth + 'px';
+    labels.style.width = chartWidth + 'px';
+  } else {
+    chart.style.width = '100%';
+    labels.style.width = '100%';
+  }
 
   const baselineH = Math.max(
     0,
@@ -1090,8 +1115,6 @@ function renderBarChart(containerId, labelId, type, color) {
   const winnerModel = rows.reduce((best, row) =>
     row.snag_mae < best.snag_mae ? row : best, rows[0]
   );
-
-  chart.style.position = 'relative';
 
   const line = document.createElement('div');
   line.className = 'baseline-line';
@@ -1108,8 +1131,8 @@ function renderBarChart(containerId, labelId, type, color) {
   rows.forEach(r => {
     const clampedMAE = Math.min(r.snag_mae, clampedMax);
     const h = Math.max(2, ((clampedMax - clampedMAE) / range) * chartH);
-    const isWin = r.model === winnerModel.model;
-    const isGlobalWin = r.model === WINNER;
+    const isTypeWinner = r.model === winnerModel.model;
+    const isGlobalWinner = r.model === WINNER;
 
     const col = document.createElement('div');
     col.className = 'bar-col';
@@ -1117,19 +1140,33 @@ function renderBarChart(containerId, labelId, type, color) {
     const bar = document.createElement('div');
     bar.className = 'bar';
     bar.style.height = h + 'px';
-    bar.style.background = isGlobalWin ? '#ffffff' : (isWin ? '#c7f2e8' : color);
-    bar.style.opacity = isWin ? '1' : '0.7';
-    bar.style.width = '100%';
-    bar.setAttribute('data-tip', `${r.model}\nMAE: ${r.snag_mae.toFixed(2)}\nR²: ${r.snag_r2.toFixed(3)}`);
+    bar.style.background = isGlobalWinner ? '#ffffff' : (isTypeWinner ? '#c7f2e8' : color);
+    bar.style.opacity = isTypeWinner ? '1' : '0.72';
+    bar.setAttribute(
+      'data-tip',
+      `${r.model}\nMAE: ${r.snag_mae.toFixed(2)}\nR²: ${r.snag_r2.toFixed(3)}`
+    );
+
     col.appendChild(bar);
     chart.appendChild(col);
 
     const lbl = document.createElement('div');
-    lbl.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:8px;color:' + (isGlobalWin ? '#fff' : '#2d3f55') + ';';
+    lbl.className = 'chart-label-item';
+    if (isGlobalWinner) lbl.style.color = '#fff';
     lbl.textContent = r.thr;
     labels.appendChild(lbl);
   });
 }
+
+function renderAll() {
+  renderTable();
+  renderBarChart('chm-chart', 'chm-labels', '4CH_CHM', '#38bdf8');
+  renderBarChart('int-chart', 'int-labels', '4CH_INT', '#f59e0b');
+}
+
+renderAll();
+window.addEventListener('resize', renderAll);
+setTimeout(renderAll, 50);
 
 renderTable();
 renderBarChart('chm-chart', 'chm-labels', '4CH_CHM', '#38bdf8');
