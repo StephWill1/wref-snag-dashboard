@@ -1090,7 +1090,6 @@ function renderBarChart(containerId, labelId, type, color) {
   const range = Math.max(1, clampedMax - displayMin);
   const chartH = window.innerWidth <= 600 ? 100 : 120;
 
-  const colWidth = window.innerWidth <= 600 ? 22 : 1;
   const gridCols = window.innerWidth <= 600
     ? `repeat(${rows.length}, 22px)`
     : `repeat(${rows.length}, minmax(0, 1fr))`;
@@ -1168,9 +1167,6 @@ renderAll();
 window.addEventListener('resize', renderAll);
 setTimeout(renderAll, 50);
 
-renderTable();
-renderBarChart('chm-chart', 'chm-labels', '4CH_CHM', '#38bdf8');
-renderBarChart('int-chart', 'int-labels', '4CH_INT', '#f59e0b');
 </script>
 </body>
 </html>
